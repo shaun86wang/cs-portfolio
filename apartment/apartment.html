@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+    attribute vec4 vPosition;
+    attribute vec4 vColor;
+    attribute vec3 vNormal;
+    attribute vec2 vTexCoord;
+    varying vec4 fColor;
+    varying vec2 fTexCoord;
+    uniform vec3 theta;
+    varying float scale;
+
+    //Lighting effect
+    uniform vec4 ambientProduct, diffuseProduct, specularProduct;
+    uniform vec4 lightPosition;
+    uniform float shininess;
+
+    //matrix for viewing
+    uniform mat4 viewMatrix;
+    uniform mat4 projectionMatrix;
+    void main() {
+      scale = 0.08;
+      mat4 scaleMatrix = mat4(
+        scale, 0.0, 0.0, 0.0,
+        0.0, scale, 0.0, 0.0,
+        0.0, 0.0, scale, 0.0,
+        0.0, 0.0, 0.0, 1.0);
+      // Calculate vector values needed for lighting
+      vec3 pos = -(viewMatrix * vPosition).xyz;
+      // get position of object (eye, at, up)
+      vec3 light = lightPosition.xyz;
+      // get light position
+      vec3 L = normalize(light - pos);
+      // calculate unit normal vector (light - pos)
+      vec3 E = normalize(-pos);
+      // get inverse unit vector from pos
+      vec3 H = normalize(L + E);
+      // Light + inverse position vector
+      vec4 NN = vec4(vNormal, 0);
+      // relative to normal plane of object
+      vec3 N = normalize((viewMatrix * NN).xyz);
+      // Transform vertex normal into eye coordinates
+
+      // Calculate ambient, diffuse, and specular
+      vec4 ambient = ambientProduct;
+      float dTheta = max(dot(L, N), 0.0);
+      vec4 diffuse = dTheta * diffuseProduct;
+      float sPhiAlpha = pow(max(dot(N, H), 0.0), shininess);
+      vec4 specular = sPhiAlpha * specularProduct;
+      if (dot(L, N) < 0.0) {
+        specular = vec4(0.0, 0.0, 0.0, 1.0);
+      }
+
+      // Pass in the overall color to the fragment shader
+      fColor = vColor + ambient + diffuse + specular;
+
+      // Take in the positions for each vertex
+      gl_Position = vPosition * scaleMatrix;
+      gl_Position = projectionMatrix * viewMatrix * gl_Position;
+      fTexCoord = vTexCoord;
+    }
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+    precision mediump float;
+    varying vec4 fColor;
+    varying vec2 fTexCoord;
+    uniform sampler2D texture;
+    void main() {
+        gl_FragColor = fColor * texture2D(texture, fTexCoord);
+    }
+</script>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="helper.js"></script>
+<script type="text/javascript" src="main.js"></script>
+<script type="text/javascript" src="objects.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+
+
+<body>
+    <canvas id="gl-canvas" width="1650" height="750">
+    Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+
+    <br/>
+    <br/>
+
+
+    <button id="xButton">Rotate X</button>
+    <button id="yButton">Rotate Y</button>
+    <button id="zButton">Rotate Z</button>
+    <button id="freezeButton">Freeze</button>
+    <br/> Fovy <input type="range" min="-180" max="180" value="45" class="slider" id="fovySlider"> Rotate: <input type="range" min="0" max="360" value="0" class="slider" id="rotate">
+    <div>
+        <div style="float:left" id="eyeDiv">
+            <label id="eyeLabel">Eye</label> <br> x: <input type="range" min="-5" max="5" value="0" class="slider" step="0.05" id="eyeXSlider"> y: <input type="range" min="-5" max="5" value="1" class="slider" step="0.05" id="eyeYSlider"> z:
+            <input type="range" min="-5" max="5" value="5" class="slider" step="0.05" id="eyeZSlider">
+        </div>
+        <div style="float:left" id="atDiv">
+            <label id="atLabel">At</label> <br> x: <input step="0.05" type="range" min="-5" max="5" value="0" class="slider" id="atXSlider"> y: <input step="0.05" type="range" min="-5" max="5" value="0" class="slider" id="atYSlider"> z:
+            <input step="0.05" type="range" min="-100" max="100" value="-100" class="slider" id="atZSlider">
+        </div>
+        <div style="float:left" id="upDiv">
+            <label id="upLabel">Up</label> <br> x: <input type="range" min="-1" max="1" value="0" step="0.05" class="slider" id="upXSlider"> y: <input type="range" min="-1" max="1" value="1" step="0.05" class="slider" id="upYSlider"> z:
+            <input type="range" min="-1" max="1" value="0" step="0.05" class="slider" id="upZSlider">
+        </div>
+
+    </div>
+
+</body>
+
+</html>

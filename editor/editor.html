@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!--this is the vertex shader of the 2d editor-->
+    <script id="vertex-shader-2d" type="x-shader/x-vertex">
+        precision mediump float;
+        attribute vec4 vPosition;
+        varying float scale;
+        uniform float pointSize;
+        uniform vec4 color;
+        void main(){
+        // scale the window so that the size is -10 to 10 for x and y axis, not -1 to 1
+        scale = 0.1;
+            mat4 scaleMat = mat4( scale,  0.0,  0.0, 0.0,
+                                0.0,  scale,  0.0, 0.0,
+                                0.0,  0.0,  scale, 0.0,
+                                0.0,  0.0,  0.0, 1.0 );
+            gl_PointSize = pointSize;
+            gl_Position = scaleMat * vPosition;
+        }
+    </script>
+
+    <!--this is the fragment shader of the 2d editor-->
+    <script id="fragment-shader-2d" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec4 color;
+        uniform float pointSize;
+        void main(){
+            gl_FragColor = color;
+        }
+
+    </script>
+
+    <!--this is the vertex shader of the 3d model viewer-->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+
+    attribute vec4 vPosition;
+    attribute vec4 vColor;
+    attribute vec3 vNormal;
+    attribute vec2 vTexCoord;
+    varying vec4 fColor;
+    varying vec2 fTexCoord;
+    uniform vec3 theta;
+    varying float scale;
+
+    //Lighting effect
+    uniform vec4 ambientProduct, diffuseProduct, specularProduct;
+    uniform vec4 lightPosition;
+    uniform float shininess;
+
+    //matrix for viewing
+    uniform mat4 viewMatrix;
+    uniform mat4 projectionMatrix;
+    void main() {
+      scale = 0.1;
+      mat4 scaleMatrix = mat4(
+        scale, 0.0, 0.0, 0.0,
+        0.0, scale, 0.0, 0.0,
+        0.0, 0.0, scale, 0.0,
+        0.0, 0.0, 0.0, 1.0);
+      // Calculate vector values needed for lighting
+      vec3 pos = -(viewMatrix * vPosition).xyz;
+      // get position of object (eye, at, up)
+      vec3 light = lightPosition.xyz;
+      // get light position
+      vec3 L = normalize(light - pos);
+      // calculate unit normal vector (light - pos)
+      vec3 E = normalize(-pos);
+      // get inverse unit vector from pos
+      vec3 H = normalize(L + E);
+      // Light + inverse position vector
+      vec4 NN = vec4(vNormal, 0);
+      // relative to normal plane of object
+      vec3 N = normalize((viewMatrix * NN).xyz);
+      // Transform vertex normal into eye coordinates
+
+      // Calculate ambient, diffuse, and specular
+      vec4 ambient = ambientProduct;
+      float dTheta = max(dot(L, N), 0.0);
+      vec4 diffuse = dTheta * diffuseProduct;
+      float sPhiAlpha = pow(max(dot(N, H), 0.0), shininess);
+      vec4 specular = sPhiAlpha * specularProduct;
+      if (dot(L, N) < 0.0) {
+        specular = vec4(0.0, 0.0, 0.0, 1.0);
+      }
+
+      // Pass in the overall color to the fragment shader
+      fColor = vColor + ambient + diffuse + specular;
+
+
+      // Take in the positions for each vertex
+      gl_Position = vPosition * scaleMatrix;
+      gl_Position = projectionMatrix * viewMatrix * gl_Position;
+      fTexCoord = vTexCoord;
+    }
+
+</script>
+
+    <!--this is the fragment shader of the 3d model viewer-->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+
+    precision mediump float;
+    varying vec4 fColor;
+    varying vec2 fTexCoord;
+    uniform sampler2D texture;
+    void main() {
+        gl_FragColor = fColor * texture2D(texture, fTexCoord);
+    }
+</script>
+
+    <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="../Common/initShaders.js"></script>
+    <script type="text/javascript" src="../Common/MV.js"></script>
+    <script type="text/javascript" src="helper.js"></script>
+    <script type="text/javascript" src="editor.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+
+
+
+</head>
+
+<body>
+    <!--this is the canvas for the 2d editor-->
+    <canvas id="gl-canvas-2d" width="500" height="500" style="border: 3px solid black;">
+            Opps ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+
+    <!--this is the canvas for the 3d model viewer-->
+    <canvas id="gl-canvas" width="500" height="500">
+        Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+    <div style="width: 600px; float:right">
+        <h2>Instruction for editor</h2>
+        <ul>
+            <li>To load the pre-drawn curve, load .txt file to the editor.</li>
+            <li>To edit the existing curve, drag the green points of the curve on the canvas.</li>
+            <li>To duplicate the curve, click any control point of the curve you want to duplicate, and then click duplicate button to make a copy of the curve.</li>
+            <li>To add new curve, click "Add New" button. The initial curve has 4 control points. Click on the screen to add more control points.
+                When finish adding control points, click "Finish" button.</li>
+            <li>To undo, click "Undo".</li>
+            <li>To redo, click "Redo".</li>
+            <li>To delete a curve, click the "Delete OFF" button. When the button changes to "Delete ON", click.
+                any of the end points that belong to the curve that you want to delete, and the curve will be deleted.
+                If you want to delete control points, click a control point (not end point) and the control point will be deleted.</li>
+            <li>To see the location of any point, click any point and the xy coordinate will be displayed after "Location:".</li>
+            <li>To save the workspace to local device, type in the file name in "Save to file" input field and click "Save object data".</li>
+            <li>To restore any workspace from local file, click "Choose File" button, select the object file, and click "Load Selected File".</li>
+            <li>To hide the green control points, click "Hide Control Points" button to hide the points. Click again to show the points.</li>
+        </ul>
+        <h2>Instruction for 3d viewer</h2>
+        <ul>
+            <li>After each edit, the 3d model of the bezier curves will automatically rendered in the viewer</li>
+            <li>Use the "Rotate" slider to rotate the model along x-axis</li>
+            <li>Click "Animate" button to see the motion of the model move along a bezier curve</li>
+            <li>Select the material you would like the model to have</li>
+        </ul>
+    </div>
+    <br>
+    <table>
+        <tr>
+            <!--this row contains the ui inputs for the 2d editor-->
+            <td>
+                <button id="addButton">Add Curve</button>
+                <button id="duplicateButton">Duplicate</button>
+                <button id="deleteButton">Delete: OFF</button>
+                <button id="undoButton">Undo</button>
+                <button id="redoButton">Redo</button>
+                <button id="hideButton">Hide Control Points</button>
+                <p>    Location: <span id="locationText"></span></p>
+                <table>
+                    <tr><td>Save-Load object data:</td></tr>
+                    <tr>
+                        <td>Save to file :</td>
+                        <td><input id="saveFileName" value="bezier.txt"></input></td>
+                        <td><button onclick="saveToFile()">Save object data</button></td>
+                    </tr>
+                    <tr>
+                        <td>Select a file to upload:</td>
+                        <td><input type="file" id="fileToLoad"></td>
+                        <td><button onclick="loadFromFile()">Load Selected File</button><td>
+                    </tr>
+                </table>
+            </td>
+            <!--this row contains the ui inputs for the 3d model viewer-->
+            <td>
+                <button id="xButton">Rotate X</button>
+                <button id="yButton">Rotate Y</button>
+                <button id="zButton">Rotate Z</button>
+                <button id="freezeButton">Freeze</button>
+                Select Material:
+                <select id="materialSelector">
+                    <option value="0">white</option>
+                    <option value="1">grey</option>
+                    <option value="2">purple</option>
+                    <option value="3">stripe</option>
+                    <option value="4">wood</option>
+                </select>
+                <button id="animateButton">Animate</button>
+                <br/> Fovy <input type="range" min="-180" max="180" value="25" class="slider" id="fovySlider"> Rotate: <input type="range" min="0" max="360" value="0" class="slider" id="rotate">
+                <div>
+                    <div style="float:left" id="eyeDiv">
+                        <label id="eyeLabel">Eye</label> <br> x: <input type="range" min="-5" max="5" value="0" class="slider" step="0.05" id="eyeXSlider"> y: <input type="range" min="-5" max="5" value="-1" class="slider" step="0.05" id="eyeYSlider"> z:
+                        <input type="range" min="-5" max="5" value="5" class="slider" step="0.05" id="eyeZSlider">
+                    </div>
+                    <br/>
+                    <div style="float:left" id="atDiv">
+                        <label id="atLabel">At</label> <br> x: <input step="0.05" type="range" min="-5" max="5" value="0" class="slider" id="atXSlider"> y: <input step="0.05" type="range" min="-5" max="5" value="0" class="slider" id="atYSlider"> z:
+                        <input step="0.05" type="range" min="-100" max="100" value="-100" class="slider" id="atZSlider">
+                    </div>
+                    <br/>
+                    <div style="float:left" id="upDiv">
+                        <label id="upLabel">Up</label> <br> x: <input type="range" min="-1" max="1" value="0" step="0.05" class="slider" id="upXSlider"> y: <input type="range" min="-1" max="1" value="0" step="0.05" class="slider" id="upYSlider"> z:
+                        <input type="range" min="-1" max="1" value="0" step="0.05" class="slider" id="upZSlider">
+                    </div>
+
+                </div>
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

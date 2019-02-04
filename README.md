@@ -1,0 +1,2 @@
+# Portfolio
+This [page](https://shaunwang.shinyapps.io/portfolio/) serves as a demonstration of projects Shaun accomplished through various classes during his pursuit of a Computer Science degree in Grand Canyon University. The sidebar presents a list of projects for simpler navigation. Different projects may be presented in different formats (websites, PDF, code snippets, etc). Keep in mind that this is not an inclusive list of all the projects. Languages used by these projects include: C++, C#, JavaScript, SQL, Python, GLSL, HTML, MIPS Assembly. 
